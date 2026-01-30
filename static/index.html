@@ -1,232 +1,914 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <title>Rust Multi Image Upload</title>
-  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700&display=swap" rel="stylesheet">
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gallery | Photos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+    rel="stylesheet">
   <style>
+    :root {
+      --bg: #0e0e0e;
+      --bg2: #1a1a1a;
+      --bg3: #232323;
+      --text: #fff;
+      --text2: #a0a0a0;
+      --muted: #666;
+      --accent: #05a081;
+      --accent2: #048a6e;
+      --border: #333;
+      --danger: #e53935;
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: 'Montserrat', Arial, sans-serif;
-      background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 2em;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
     }
 
-    h1 {
-      text-align: center;
-      color: #2d3a4b;
-      letter-spacing: 2px;
-      margin-bottom: 0.8em;
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg2);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      border-bottom: 1px solid var(--border);
     }
 
-    .card {
-      background: #fff;
-      border-radius: 18px;
-      box-shadow: 0 4px 24px rgba(44, 62, 80, 0.08);
-      padding: 2em;
-      margin-bottom: 2em;
-    }
-
-    .form-group { margin-bottom: 1.5em; }
-
-    label {
-      display: block;
-      margin-bottom: 0.5em;
-      color: #2d3a4b;
-      font-weight: 600;
-    }
-
-    input[type="file"] {
-      padding: 0.6em;
-      border-radius: 8px;
-      border: 1px solid #bfc9d1;
-      width: 100%;
-      font-size: 1em;
-      background: #fff;
-    }
-
-    button {
-      background: linear-gradient(90deg, #4f8cff 0%, #3358e6 100%);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 0.85em 2em;
-      font-size: 1.05em;
+    .logo {
+      font-size: 22px;
       font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo .material-symbols-outlined {
+      font-size: 28px;
+    }
+
+    .search-box {
+      flex: 1;
+      max-width: 600px;
+      display: flex;
+      align-items: center;
+      background: var(--bg3);
+      border-radius: var(--radius);
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--accent);
+    }
+
+    .search-box .material-symbols-outlined {
+      padding: 10px;
+      color: var(--muted);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 10px 14px 10px 0;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+    }
+
+    .search-box input::placeholder {
+      color: var(--muted);
+    }
+
+    .header-btn {
+      padding: 10px 18px;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
       transition: background 0.2s;
     }
 
-    button:hover {
-      background: linear-gradient(90deg, #3358e6 0%, #4f8cff 100%);
+    .header-btn:hover {
+      background: var(--accent2);
     }
 
-    .error {
-      color: #e74c3c;
-      margin-top: 0.8em;
-      font-weight: 600;
+    .header-btn .material-symbols-outlined {
+      font-size: 18px;
     }
 
-    .img-card {
-      background: #f7fafd;
-      border-radius: 14px;
-      box-shadow: 0 2px 10px rgba(44, 62, 80, 0.06);
-      padding: 2em;
-      text-align: center;
+    /* Main */
+    .main {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 24px;
     }
 
-    .img-card h3 {
-      color: #3358e6;
-      margin-bottom: 0.8em;
-    }
-
-    .grid {
+    /* Toolbar */
+    .toolbar {
       display: flex;
-      gap: 14px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
       flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .photo-count {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 10px 18px;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      color: var(--text);
+    }
+
+    .btn:hover {
+      background: var(--bg3);
+      border-color: var(--text2);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .btn.primary:hover {
+      background: var(--accent2);
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn.danger:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn .material-symbols-outlined {
+      font-size: 18px;
+    }
+
+    /* Upload Zone */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 50px 30px;
+      text-align: center;
+      margin-bottom: 24px;
+      cursor: pointer;
+      background: var(--bg2);
+      transition: all 0.2s;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(5, 160, 129, 0.05);
+    }
+
+    .upload-zone .material-symbols-outlined {
+      font-size: 48px;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .upload-zone h3 {
+      font-size: 18px;
+      margin-bottom: 6px;
+    }
+
+    .upload-zone p {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    .upload-zone input {
+      display: none;
+    }
+
+    /* Masonry Grid */
+    .masonry {
+      column-count: 3;
+      column-gap: 16px;
+    }
+
+    @media (max-width: 1200px) {
+      .masonry {
+        column-count: 2;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .masonry {
+        column-count: 1;
+      }
+    }
+
+    /* Photo Card */
+    .photo {
+      break-inside: avoid;
+      margin-bottom: 16px;
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--bg3);
+    }
+
+    .photo img {
+      width: 100%;
+      display: block;
+      transition: transform 0.3s;
+    }
+
+    .photo:hover img {
+      transform: scale(1.02);
+    }
+
+    .photo-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent 35%, transparent 65%, rgba(0, 0, 0, 0.6));
+      opacity: 0;
+      transition: opacity 0.2s;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px;
+    }
+
+    .photo:hover .photo-overlay {
+      opacity: 1;
+    }
+
+    /* Card Top */
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .checkbox {
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      background: rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.15s;
+    }
+
+    .photo:hover .checkbox,
+    .checkbox.visible {
+      opacity: 1;
+    }
+
+    .checkbox.checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .checkbox .material-symbols-outlined {
+      font-size: 16px;
+    }
+
+    .photo.selected {
+      outline: 3px solid var(--accent);
+      outline-offset: -3px;
+    }
+
+    .card-btns {
+      display: flex;
+      gap: 6px;
+    }
+
+    .card-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: none;
+      background: rgba(255, 255, 255, 0.9);
+      color: #1a1a1a;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .card-btn:hover {
+      background: #fff;
+      transform: scale(1.05);
+    }
+
+    .card-btn.del:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .card-btn .material-symbols-outlined {
+      font-size: 18px;
+    }
+
+    /* Card Bottom */
+    .card-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .photo-name {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-controls {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* Tags */
+    .tag-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tag-input {
+      flex: 1;
+      padding: 7px 10px;
+      border-radius: 5px;
+      border: none;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .tag-input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .tag-add {
+      padding: 7px 12px;
+      border-radius: 5px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(5, 160, 129, 0.3);
+      font-size: 11px;
+    }
+
+    .tag-x {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .tag-x:hover {
+      opacity: 1;
+    }
+
+    /* Empty State */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .empty .material-symbols-outlined {
+      font-size: 64px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .empty h3 {
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    .empty p {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* Error */
+    .error {
+      background: rgba(229, 57, 53, 0.1);
+      border: 1px solid rgba(229, 57, 53, 0.3);
+      border-radius: var(--radius);
+      color: #ff6b6b;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    /* Selection Bar */
+    .sel-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 200;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .sel-bar.hidden {
+      display: none;
+    }
+
+    .sel-count {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+    }
+
+    .sel-btn {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+    }
+
+    .sel-btn:hover {
+      color: var(--text);
+      background: var(--bg2);
+    }
+
+    .sel-btn.primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .sel-btn.primary:hover {
+      background: var(--accent2);
+    }
+
+    .sel-btn .material-symbols-outlined {
+      font-size: 16px;
+    }
+
+    /* Modal */
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+    }
+
+    .modal-bg.hidden {
+      display: none;
+    }
+
+    .modal {
+      background: var(--bg3);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      width: 90%;
+      max-width: 380px;
+    }
+
+    .modal h3 {
+      font-size: 20px;
+      margin-bottom: 18px;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      border: 2px solid var(--border);
+      background: var(--bg2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      margin-bottom: 18px;
+    }
+
+    .modal-input:focus {
+      border-color: var(--accent);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* Albums */
+    .albums {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .albums.hidden {
+      display: none;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .album-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .album-card {
+      background: var(--bg2);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .album-card:hover {
+      border-color: var(--accent);
+    }
+
+    .album-cover {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2px;
+      aspect-ratio: 16/10;
+      background: var(--bg);
+    }
+
+    .album-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .album-cover .ph {
+      background: var(--bg3);
+      display: flex;
+      align-items: center;
       justify-content: center;
     }
 
-    .grid img {
-      width: 240px;
-      height: 240px;
-      object-fit: cover;
-      border-radius: 12px;
-      border: 1px solid #bfc9d1;
-      background: #fff;
+    .album-cover .ph .material-symbols-outlined {
+      font-size: 24px;
+      color: var(--muted);
     }
 
-    .muted {
-      color: #7d8a98;
-      font-size: 0.95em;
-      margin-top: 1em;
+    .album-info {
+      padding: 14px;
+    }
+
+    .album-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .album-count {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .album-actions {
+      padding: 0 14px 14px;
+    }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .header {
+        padding: 10px 16px;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .search-box {
+        order: 3;
+        max-width: 100%;
+        flex-basis: 100%;
+      }
+
+      .main {
+        padding: 16px;
+      }
+
+      .toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .sel-bar {
+        width: calc(100% - 32px);
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg3);
+      border-radius: 4px;
     }
   </style>
 </head>
 
-
 <body>
-  <h1>SHUFFEL</h1>
+  <header class="header">
+    <a href="#" class="logo"><span class="material-symbols-outlined">photo_library</span>
+      <h1>Kioku</h1>
+    </a>
+    <div class="search-box"><span class="material-symbols-outlined">search</span><input type="text" id="search"
+        placeholder="Search photos..."></div>
+    <button class="header-btn" id="upload-btn"><span
+        class="material-symbols-outlined">cloud_upload</span>Upload</button>
+  </header>
 
-  <div class="card">
-    <form id="upload-form">
-      <div class="form-group">
-        <label for="image-input">Choose images:</label>
-        <input
-          type="file"
-          id="image-input"
-          name="image"
-          accept="image/*"
-          multiple
-          required
-        />
+  <main class="main">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <h1 class="page-title">Photos</h1><span class="photo-count" id="count">0 photos</span>
       </div>
+      <div class="toolbar-actions">
+        <button class="btn primary" id="submit-btn"><span class="material-symbols-outlined">backup</span>Upload to
+          Server</button>
+        <button class="btn danger" id="clear-btn"><span class="material-symbols-outlined">delete_sweep</span>Clear
+          All</button>
+      </div>
+    </div>
 
-      <button type="submit">Upload & Preview</button>
-      <div class="error" id="error"></div>
-    </form>
+    <div class="upload-zone" id="zone">
+      <span class="material-symbols-outlined">add_photo_alternate</span>
+      <h3>Upload your photos</h3>
+      <p>Drag and drop images here or click to browse</p>
+      <input type="file" id="input" accept="image/*" multiple>
+      <button class="btn">Browse Files</button>
+    </div>
+
+    <div class="error" id="error"></div>
+    <div class="masonry" id="grid"></div>
+    <div class="empty" id="empty"><span class="material-symbols-outlined">image_search</span>
+      <h3>No photos yet</h3>
+      <p>Upload some images to get started</p>
+    </div>
+
+    <div class="albums hidden" id="albums">
+      <h2 class="section-title">Collections</h2>
+      <div class="album-grid" id="album-grid"></div>
+    </div>
+  </main>
+
+  <div class="sel-bar hidden" id="sel-bar">
+    <span class="sel-count" id="sel-count">0 selected</span>
+    <div class="divider"></div>
+    <button class="sel-btn" id="sel-all"><span class="material-symbols-outlined">select_all</span>Select All</button>
+    <button class="sel-btn" id="desel"><span class="material-symbols-outlined">deselect</span>Clear</button>
+    <div class="divider"></div>
+    <button class="sel-btn primary" id="create-btn"><span
+        class="material-symbols-outlined">create_new_folder</span>Create Album</button>
   </div>
 
-  <!-- ✅ Only one preview section -->
-  <div class="img-card">
-    <h3>Preview</h3>
-    <div id="preview-grid" class="grid"></div>
-    <div class="muted" id="preview-hint">No images selected.</div>
+  <div class="modal-bg hidden" id="modal">
+    <div class="modal">
+      <h3>New Album</h3><input type="text" class="modal-input" id="album-name" placeholder="Album name...">
+      <div class="modal-actions"><button class="btn" id="cancel">Cancel</button><button class="btn primary"
+          id="confirm">Create</button></div>
+    </div>
   </div>
 
   <script>
-    window.addEventListener("DOMContentLoaded", () => {
-      // ✅ All elements exist now (no null issue)
-      const form = document.getElementById("upload-form");
-      const input = document.getElementById("image-input");
-      const previewGrid = document.getElementById("preview-grid");
-      const previewHint = document.getElementById("preview-hint");
-      const errorDiv = document.getElementById("error");
+    let gallery = [], albums = [];
+    const $ = id => document.getElementById(id);
+    const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
 
-      function clearPreview() {
-        previewGrid.innerHTML = "";
-        previewHint.style.display = "";
+    function render() {
+      const grid = $('grid');
+      grid.innerHTML = '';
+      const query = $('search').value.toLowerCase().trim();
+      const filtered = query ? gallery.filter(x => x.file.name.toLowerCase().includes(query) || x.tags.some(t => t.toLowerCase().includes(query))) : gallery;
+
+      $('count').textContent = `${filtered.length} photo${filtered.length !== 1 ? 's' : ''}`;
+
+      if (!filtered.length) {
+        $('empty').style.display = gallery.length ? 'none' : '';
+        $('zone').style.display = gallery.length ? 'none' : '';
+        updateSel();
+        return;
       }
+      $('empty').style.display = 'none'; $('zone').style.display = 'none';
 
-      function showImages(srcList) {
-        previewGrid.innerHTML = "";
-
-        if (!srcList || srcList.length === 0) {
-          previewHint.style.display = "";
-          previewHint.textContent = "No images selected.";
-          return;
-        }
-
-        previewHint.style.display = "none";
-        for (const src of srcList) {
-          const img = document.createElement("img");
-          img.src = src;
-          previewGrid.appendChild(img);
-        }
-      }
-
-      // ✅ Local preview (before upload)
-      input.addEventListener("change", () => {
-        errorDiv.textContent = "";
-
-        const files = input.files;
-        if (!files || files.length === 0) {
-          clearPreview();
-          return;
-        }
-
-        const localUrls = [];
-        for (const file of files) {
-          localUrls.push(URL.createObjectURL(file));
-        }
-
-        showImages(localUrls);
+      const hasSel = gallery.some(x => x.selected);
+      filtered.forEach((item) => {
+        const originalIndex = gallery.indexOf(item);
+        const card = document.createElement('div');
+        card.className = 'photo' + (item.selected ? ' selected' : '');
+        card.innerHTML = `
+          <img src="${item.url}" alt="${item.file.name}">
+          <div class="photo-overlay">
+            <div class="card-top">
+              <div class="checkbox ${item.selected ? 'checked visible' : ''} ${hasSel ? 'visible' : ''}" data-id="${item.id}">${item.selected ? '<span class="material-symbols-outlined">check</span>' : ''}</div>
+              <div class="card-btns">
+                <button class="card-btn" data-i="${originalIndex}" data-d="-1" title="Move left"><span class="material-symbols-outlined">chevron_left</span></button>
+                <button class="card-btn" data-i="${originalIndex}" data-d="1" title="Move right"><span class="material-symbols-outlined">chevron_right</span></button>
+                <button class="card-btn del" data-del="${item.id}" title="Delete"><span class="material-symbols-outlined">delete</span></button>
+              </div>
+            </div>
+            <div class="card-bottom">
+              <div class="photo-name">${item.file.name}</div>
+              <div class="tag-row">
+                <input class="tag-input" placeholder="Add tags..." data-id="${item.id}">
+                <button class="tag-add" data-id="${item.id}">Add</button>
+              </div>
+              ${item.tags.length ? `<div class="tags">${item.tags.map(t => `<span class="tag">${t}<button class="tag-x" data-id="${item.id}" data-t="${t}">×</button></span>`).join('')}</div>` : ''}
+            </div>
+          </div>`;
+        grid.appendChild(card);
       });
 
-      // ✅ Upload to backend and replace preview using server response
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        errorDiv.textContent = "";
+      grid.onclick = e => {
+        const cb = e.target.closest('.checkbox'); if (cb) { toggle(cb.dataset.id); return; }
+        const add = e.target.closest('.tag-add'); if (add) { const inp = grid.querySelector(`.tag-input[data-id="${add.dataset.id}"]`); addTag(add.dataset.id, inp.value); inp.value = ''; return; }
+        const rm = e.target.closest('.tag-x'); if (rm) { rmTag(rm.dataset.id, rm.dataset.t); return; }
+        const mv = e.target.closest('[data-d]'); if (mv) { move(+mv.dataset.i, +mv.dataset.d); return; }
+        const del = e.target.closest('[data-del]'); if (del) { deleteImg(del.dataset.del); return; }
+      };
+      grid.onkeypress = e => { if (e.key === 'Enter' && e.target.classList.contains('tag-input')) { addTag(e.target.dataset.id, e.target.value); e.target.value = ''; } };
+      updateSel();
+    }
 
-        const files = input.files;
-        if (!files || files.length === 0) {
-          errorDiv.textContent = "Please select at least one image.";
-          return;
-        }
-
-        const formData = new FormData();
-        for (const file of files) {
-          // ✅ IMPORTANT: must match Rust backend: field name "image"
-          formData.append("image", file);
-        }
-
-        try {
-          const res = await fetch("/api/image", {
-            method: "POST",
-            body: formData
-          });
-
-          if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`Upload failed (${res.status}): ${text}`);
-          }
-
-          // expected JSON: { images: ["data:image/...;base64,...", ...] }
-          const data = await res.json();
-
-          if (!data.images || data.images.length === 0) {
-            throw new Error("Server returned no images.");
-          }
-
-          showImages(data.images);
-        } catch (err) {
-          errorDiv.textContent = err.message;
-        }
+    function addFiles(files) { for (const f of files) if (f.type.startsWith('image/')) gallery.push({ id: uid(), file: f, url: URL.createObjectURL(f), tags: [], selected: false }); render(); }
+    function deleteImg(id) { const i = gallery.findIndex(x => x.id === id); if (i > -1) { URL.revokeObjectURL(gallery[i].url); gallery.splice(i, 1); render(); } }
+    function move(i, d) { const n = i + d; if (n >= 0 && n < gallery.length) { [gallery[i], gallery[n]] = [gallery[n], gallery[i]]; render(); } }
+    function addTag(id, raw) { const item = gallery.find(x => x.id === id); if (item) raw.split(',').map(t => t.trim()).filter(Boolean).forEach(t => { if (!item.tags.includes(t)) item.tags.push(t); }); render(); }
+    function rmTag(id, tag) { const item = gallery.find(x => x.id === id); if (item) { item.tags = item.tags.filter(t => t !== tag); render(); } }
+    function toggle(id) { const item = gallery.find(x => x.id === id); if (item) { item.selected = !item.selected; render(); } }
+    function updateSel() { const sel = gallery.filter(x => x.selected); $('sel-bar').classList.toggle('hidden', !sel.length); $('sel-count').textContent = `${sel.length} selected`; renderAlbums(); }
+    function createAlbum(name) { const sel = gallery.filter(x => x.selected); if (!sel.length || !name.trim()) return; albums.push({ id: uid(), name: name.trim(), ids: sel.map(x => x.id) }); gallery.forEach(x => x.selected = false); render(); }
+    function delAlbum(id) { albums = albums.filter(a => a.id !== id); renderAlbums(); }
+    function renderAlbums() {
+      const g = $('album-grid'); g.innerHTML = ''; if (!albums.length) { $('albums').classList.add('hidden'); return; } $('albums').classList.remove('hidden');
+      albums.forEach(a => {
+        const imgs = a.ids.map(id => gallery.find(x => x.id === id)).filter(Boolean).slice(0, 4);
+        const card = document.createElement('div'); card.className = 'album-card';
+        card.innerHTML = `<div class="album-cover">${[0, 1, 2, 3].map(i => imgs[i] ? `<img src="${imgs[i].url}">` : `<div class="ph"><span class="material-symbols-outlined">image</span></div>`).join('')}</div>
+          <div class="album-info"><div class="album-name">${a.name}</div><div class="album-count">${a.ids.filter(id => gallery.find(x => x.id === id)).length} photos</div></div>
+          <div class="album-actions"><button class="btn" onclick="delAlbum('${a.id}')"><span class="material-symbols-outlined">delete</span>Remove</button></div>`;
+        g.appendChild(card);
       });
-    });
+    }
+    function showErr(m) { $('error').textContent = m; $('error').classList.add('show'); }
+
+    $('upload-btn').onclick = () => $('input').click();
+    $('zone').querySelector('.btn').onclick = e => { e.stopPropagation(); $('input').click(); };
+    $('zone').onclick = () => $('input').click();
+    $('input').onchange = () => { if ($('input').files.length) { addFiles($('input').files); $('input').value = ''; } };
+    $('zone').ondragover = e => { e.preventDefault(); $('zone').classList.add('dragover'); };
+    $('zone').ondragleave = () => $('zone').classList.remove('dragover');
+    $('zone').ondrop = e => { e.preventDefault(); $('zone').classList.remove('dragover'); if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files); };
+    $('clear-btn').onclick = () => { gallery.forEach(x => URL.revokeObjectURL(x.url)); gallery = []; render(); };
+    $('submit-btn').onclick = async () => {
+      $('error').classList.remove('show'); if (!gallery.length) return showErr('Add images first');
+      const fd = new FormData(); gallery.forEach(x => fd.append('image', x.file)); fd.append('tags', JSON.stringify(gallery.map(x => ({ name: x.file.name, tags: x.tags }))));
+      try { const r = await fetch('/api/image', { method: 'POST', body: fd }); if (!r.ok) throw new Error(await r.text()); const d = await r.json(); if (d.images) gallery = gallery.map((x, i) => ({ ...x, url: d.images[i] || x.url })); render(); } catch (e) { showErr(e.message); }
+    };
+    $('sel-all').onclick = () => { gallery.forEach(x => x.selected = true); render(); };
+    $('desel').onclick = () => { gallery.forEach(x => x.selected = false); render(); };
+    $('create-btn').onclick = () => { $('album-name').value = ''; $('modal').classList.remove('hidden'); $('album-name').focus(); };
+    $('cancel').onclick = () => $('modal').classList.add('hidden');
+    $('confirm').onclick = () => { createAlbum($('album-name').value); $('modal').classList.add('hidden'); };
+    $('album-name').onkeypress = e => { if (e.key === 'Enter') { createAlbum($('album-name').value); $('modal').classList.add('hidden'); } };
+    $('modal').onclick = e => { if (e.target === $('modal')) $('modal').classList.add('hidden'); };
+    $('search').oninput = render;
+    document.onkeydown = e => { if (e.key === 'Escape' && !$('modal').classList.contains('hidden')) $('modal').classList.add('hidden'); };
+    render();
   </script>
 </body>
+
 </html>
