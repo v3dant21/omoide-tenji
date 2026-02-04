@@ -1,0 +1,4 @@
+/* Reset handled in App.css */
+#root {
+  min-height: 100vh;
+}

@@ -36,13 +36,13 @@ pub async fn image_handler(mut multipart: Multipart) -> Result<impl IntoResponse
             continue;
         }
 
-        // ✅ Make it owned String so it doesn't borrow `field`
+        
         let content_type = field
             .content_type()
             .unwrap_or("application/octet-stream")
             .to_string();
 
-        // ✅ Now it can be moved safely
+        
         let data = field
             .bytes()
             .await
