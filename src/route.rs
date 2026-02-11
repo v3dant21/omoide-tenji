@@ -11,7 +11,7 @@ pub fn create_routes() -> Router {
     let router = Router::new()
         .route("/api/health", get(health_check_handler))
         .route("/api/image", post(image_handler))
-        .nest_service("/", ServeDir::new("static"));
+    .nest_service("/", ServeDir::new("static"));
 
 
     return router;
