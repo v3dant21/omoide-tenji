@@ -1,67 +1,44 @@
 use axum::{
-    extract::Multipart,
+    extract::State,
+    extract::Path,
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use base64::Engine;
-use serde::Serialize;
+use uuid::Uuid;
 
-pub async fn health_check_handler()
-    -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)>
-{
-    let json_response = serde_json::json!({
-        "status": "ok"
-    });
+use crate::s3::list_gallery_images;
+use crate::AppState;
 
-    Ok((StatusCode::OK, Json(json_response)))
-}
-#[derive(Serialize)]
-
-pub struct UploadPreviewResponse {
-    pub images: Vec<String>,
+pub async fn health_check_handler() -> impl IntoResponse {
+    Json(serde_json::json!({ "status": "ok" }))
 }
 
-pub async fn image_handler(mut multipart: Multipart) -> Result<impl IntoResponse, StatusCode> {
-    let mut images_out: Vec<String> = Vec::new();
+pub async fn create_gallery() -> impl IntoResponse {
+    let gallery_id = Uuid::new_v4().to_string();
+    let share_url = format!("/g/{gallery_id}");
 
-    while let Some(field) = multipart
-        .next_field()
+    Json(serde_json::json!({
+        "gallery_id": gallery_id,
+        "share_url": share_url,
+    }))
+}
+
+pub async fn get_gallery(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let keys = list_gallery_images(&state.s3_client, &state.bucket, &id)
         .await
-        .map_err(|_| StatusCode::BAD_REQUEST)?
-    {
-        let name = field.name().unwrap_or("");
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
-        if name != "image" {
-            continue;
-        }
+    let image_urls: Vec<String> = keys
+        .iter()
+        .map(|key| format!("https://{}.s3.amazonaws.com/{}", state.bucket, key))
+        .collect();
 
-        
-        let content_type = field
-            .content_type()
-            .unwrap_or("application/octet-stream")
-            .to_string();
-
-        
-        let data = field
-            .bytes()
-            .await
-            .map_err(|_| StatusCode::BAD_REQUEST)?
-            .to_vec();
-
-        if data.is_empty() {
-            continue;
-        }
-
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&data);
-        let data_url = format!("data:{};base64,{}", content_type, b64);
-
-        images_out.push(data_url);
-    }
-
-    if images_out.is_empty() {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    Ok(Json(UploadPreviewResponse { images: images_out }))
+    Ok(Json(serde_json::json!({
+        "gallery_id": id,
+        "images": image_urls,
+    })))
 }

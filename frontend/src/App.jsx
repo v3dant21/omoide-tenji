@@ -128,16 +128,30 @@ function App() {
     }
 
     setUploading(true)
-    const fd = new FormData()
-    gallery.forEach(x => fd.append('image', x.file))
-    fd.append('tags', JSON.stringify(gallery.map(x => ({ name: x.name, tags: x.tags }))))
-
     try {
-      const r = await fetch('/api/image', { method: 'POST', body: fd })
-      if (!r.ok) throw new Error(await r.text())
-      const d = await r.json()
-      if (d.images) {
-        setGallery(prev => prev.map((x, i) => ({ ...x, shareLink: d.images[i] || x.shareLink })))
+      // Step 1: Create a new gallery
+      const createRes = await fetch('/api/gallery', { method: 'POST' })
+      if (!createRes.ok) throw new Error(await createRes.text())
+      const { gallery_id } = await createRes.json()
+
+      // Step 2: Upload images to the gallery
+      const fd = new FormData()
+      toUpload.forEach(x => fd.append('image', x.file))
+
+      const uploadRes = await fetch(`/api/gallery/${gallery_id}/upload`, { method: 'POST', body: fd })
+      if (!uploadRes.ok) throw new Error(await uploadRes.text())
+      const data = await uploadRes.json()
+
+      if (data.images) {
+        // Map uploaded URLs back to the items that were uploaded
+        const uploadedIds = toUpload.map(x => x.id)
+        setGallery(prev => prev.map(x => {
+          const uploadIdx = uploadedIds.indexOf(x.id)
+          if (uploadIdx !== -1 && data.images[uploadIdx]) {
+            return { ...x, shareLink: data.images[uploadIdx] }
+          }
+          return x
+        }))
       }
     } catch (e) {
       setError(e.message)
