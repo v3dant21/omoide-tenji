@@ -9,7 +9,9 @@ pub async fn upload_to_s3(
     data: Vec<u8>,
     content_type: &str,
 ) -> Result<String, String> {
-    client
+    println!("  🚀 S3 upload starting: bucket={bucket}, key={key}, size={} bytes, content_type={content_type}", data.len());
+
+    match client
         .put_object()
         .bucket(bucket)
         .key(key)
@@ -17,9 +19,18 @@ pub async fn upload_to_s3(
         .content_type(content_type)
         .send()
         .await
-        .map_err(|e| format!("S3 upload error: {e:?}"))?;
+    {
+        Ok(_) => {
+            println!("  ✅ S3 upload succeeded: {key}");
+        }
+        Err(e) => {
+            let err_msg = format!("S3 upload error for key={key}: {e:?}");
+            println!("  ❌ {err_msg}");
+            return Err(err_msg);
+        }
+    }
 
-    let url = format!("https://{bucket}.s3.amazonaws.com/{key}");
+    let url = format!("https://{bucket}.s3.{}.amazonaws.com/{key}", std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string()));
     Ok(url)
 }
 

@@ -16,9 +16,12 @@ async fn main() {
     dotenvy::dotenv().ok();
 
     let bucket = std::env::var("S3_BUCKET").expect("S3_BUCKET must be set");
+    let region = std::env::var("AWS_REGION").unwrap_or_else(|_| "not set".to_string());
+
 
     let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
     let s3_client = Client::new(&config);
+
 
     let state = AppState { s3_client, bucket };
     let app = routes::create_routes(state);

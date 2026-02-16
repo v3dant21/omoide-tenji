@@ -1,9 +1,21 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import './App.css'
 
 const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16)
 
 function App() {
+  // Check if we're on a gallery viewer page
+  const galleryMatch = window.location.pathname.match(/^\/g\/(.+)$/)
+  const viewGalleryId = galleryMatch ? galleryMatch[1] : null
+
+  if (viewGalleryId) {
+    return <GalleryViewer galleryId={viewGalleryId} />
+  }
+
+  return <UploadApp />
+}
+
+function UploadApp() {
   const [gallery, setGallery] = useState([])
   const [albums, setAlbums] = useState([])
   const [search, setSearch] = useState('')
@@ -12,6 +24,8 @@ function App() {
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 0, name: '' })
+  const [shareUrl, setShareUrl] = useState(null)
+  const [showShareBox, setShowShareBox] = useState(false)
 
   const filteredGallery = search.trim()
     ? gallery.filter(x => x.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -128,30 +142,38 @@ function App() {
     }
 
     setUploading(true)
+    setProgress({ current: 0, total: toUpload.length, name: toUpload[0].name })
     try {
       // Step 1: Create a new gallery
       const createRes = await fetch('/api/gallery', { method: 'POST' })
       if (!createRes.ok) throw new Error(await createRes.text())
-      const { gallery_id } = await createRes.json()
+      const { gallery_id, share_url } = await createRes.json()
 
-      // Step 2: Upload images to the gallery
-      const fd = new FormData()
-      toUpload.forEach(x => fd.append('image', x.file))
+      // Store the shareable gallery link
+      const fullShareUrl = window.location.origin + share_url
+      setShareUrl(fullShareUrl)
+      setShowShareBox(true)
 
-      const uploadRes = await fetch(`/api/gallery/${gallery_id}/upload`, { method: 'POST', body: fd })
-      if (!uploadRes.ok) throw new Error(await uploadRes.text())
-      const data = await uploadRes.json()
+      // Step 2: Upload images one by one with progress
+      for (let i = 0; i < toUpload.length; i++) {
+        const item = toUpload[i]
+        setProgress({ current: i + 1, total: toUpload.length, name: item.name })
 
-      if (data.images) {
-        // Map uploaded URLs back to the items that were uploaded
-        const uploadedIds = toUpload.map(x => x.id)
-        setGallery(prev => prev.map(x => {
-          const uploadIdx = uploadedIds.indexOf(x.id)
-          if (uploadIdx !== -1 && data.images[uploadIdx]) {
-            return { ...x, shareLink: data.images[uploadIdx] }
-          }
-          return x
-        }))
+        const fd = new FormData()
+        fd.append('image', item.file)
+
+        const uploadRes = await fetch(`/api/gallery/${gallery_id}/upload`, { method: 'POST', body: fd })
+        if (!uploadRes.ok) throw new Error(await uploadRes.text())
+        const data = await uploadRes.json()
+
+        // Update the item with its share link
+        if (data.images && data.images[0]) {
+          setGallery(prev => prev.map(x =>
+            x.id === item.id ? { ...x, shareLink: data.images[0] } : x
+          ))
+        }
+
+
       }
     } catch (e) {
       setError(e.message)
@@ -198,6 +220,11 @@ function App() {
             <button className="btn primary" onClick={uploadToServer} disabled={uploading}>
               <span className="icon">backup</span>{uploading ? 'Uploading...' : 'Upload to Server'}
             </button>
+            {shareUrl && (
+              <button className="btn share" onClick={() => setShowShareBox(true)}>
+                <span className="icon">share</span>Share
+              </button>
+            )}
             <button className="btn danger" onClick={clearAll}>
               <span className="icon">delete_sweep</span>Clear All
             </button>
@@ -229,11 +256,15 @@ function App() {
 
         {error && <div className="error show">{error}</div>}
 
+        {showShareBox && shareUrl && (
+          <ShareLinkBox url={shareUrl} onClose={() => setShowShareBox(false)} />
+        )}
+
         {uploading && (
           <div className="upload-progress show">
             <span>Uploading {progress.current}/{progress.total}: {progress.name}</span>
             <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${(progress.current / progress.total) * 100}%` }} />
+              <div className="progress-fill" style={{ width: `${progress.total ? (progress.current / progress.total) * 100 : 0}%` }} />
             </div>
           </div>
         )}
@@ -390,6 +421,35 @@ function PhotoCard({ item, idx, hasSel, onToggle, onDelete, onMove, onAddTag, on
   )
 }
 
+function ShareLinkBox({ url, onClose }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="share-box">
+      <div className="share-box-header">
+        <span className="icon">link</span>
+        <span className="share-box-title">Gallery Share Link</span>
+        <button className="share-box-close" onClick={onClose}>
+          <span className="icon">close</span>
+        </button>
+      </div>
+      <div className="share-box-body">
+        <input className="share-box-input" value={url} readOnly onClick={e => e.target.select()} />
+        <button className={`share-box-copy${copied ? ' copied' : ''}`} onClick={handleCopy}>
+          <span className="icon">{copied ? 'check' : 'content_copy'}</span>
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function AlbumCard({ album, gallery, onDelete }) {
   const images = album.ids.map(id => gallery.find(x => x.id === id)).filter(Boolean).slice(0, 4)
 
@@ -411,6 +471,74 @@ function AlbumCard({ album, gallery, onDelete }) {
           <span className="icon">delete</span>Remove
         </button>
       </div>
+    </div>
+  )
+}
+
+function GalleryViewer({ galleryId }) {
+  const [images, setImages] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchGallery = async () => {
+      try {
+        const res = await fetch(`/api/gallery/${galleryId}`)
+        if (!res.ok) throw new Error('Gallery not found')
+        const data = await res.json()
+        setImages(data.images || [])
+      } catch (e) {
+        setError(e.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchGallery()
+  }, [galleryId])
+
+  return (
+    <div className="app">
+      <header className="header">
+        <a href="/" className="logo">
+          <span className="icon">photo_library</span>
+          <h1>Kioku</h1>
+        </a>
+        <div className="viewer-header-right">
+          <span className="photo-count">{images.length} photo{images.length !== 1 ? 's' : ''}</span>
+          <a className="btn primary" href={`/api/gallery/${galleryId}/download`}>
+            <span className="icon">download</span>Download All
+          </a>
+        </div>
+      </header>
+
+      <main className="main">
+        {loading && (
+          <div className="empty">
+            <span className="icon">hourglass_empty</span>
+            <h3>Loading gallery...</h3>
+          </div>
+        )}
+
+        {error && <div className="error show">{error}</div>}
+
+        {!loading && !error && images.length === 0 && (
+          <div className="empty">
+            <span className="icon">image_search</span>
+            <h3>Gallery is empty</h3>
+            <p>No images found in this gallery</p>
+          </div>
+        )}
+
+        {!loading && images.length > 0 && (
+          <div className="masonry">
+            {images.map((url, i) => (
+              <div key={i} className="viewer-photo">
+                <img src={url} alt={`Photo ${i + 1}`} loading="lazy" />
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   )
 }

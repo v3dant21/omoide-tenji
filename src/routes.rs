@@ -1,5 +1,7 @@
 use axum::{
     extract::DefaultBodyLimit,
+    http::StatusCode,
+    response::{Html, IntoResponse},
     routing::{get, post},
     Router,
 };
@@ -10,6 +12,14 @@ use crate::file_ops::{download_gallery, upload_gallery};
 use crate::handler::{create_gallery, get_gallery, health_check_handler};
 use crate::AppState;
 
+
+async fn spa_fallback() -> impl IntoResponse {
+    match tokio::fs::read_to_string("static/index.html").await {
+        Ok(html) => Html(html).into_response(),
+        Err(_) => (StatusCode::NOT_FOUND, "Not found").into_response(),
+    }
+}
+
 pub fn create_routes(state: AppState) -> Router {
     Router::new()
         .route("/api/health", get(health_check_handler))
@@ -17,9 +27,9 @@ pub fn create_routes(state: AppState) -> Router {
         .route("/api/gallery/:id", get(get_gallery))
         .route("/api/gallery/:id/upload", post(upload_gallery))
         .route("/api/gallery/:id/download", get(download_gallery))
-        .layer(DefaultBodyLimit::max(50 * 1024 * 1024)) // 50 MB
+        .route("/g/:id", get(spa_fallback))
+        .layer(DefaultBodyLimit::max(200 * 1024 * 1024)) // 200 MB
         .layer(CorsLayer::permissive())
         .fallback_service(ServeDir::new("static"))
         .with_state(state)
 }
-

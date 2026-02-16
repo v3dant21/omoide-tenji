@@ -32,9 +32,10 @@ pub async fn get_gallery(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
+    let region = std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string());
     let image_urls: Vec<String> = keys
         .iter()
-        .map(|key| format!("https://{}.s3.amazonaws.com/{}", state.bucket, key))
+        .map(|key| format!("https://{}.s3.{}.amazonaws.com/{}", state.bucket, region, key))
         .collect();
 
     Ok(Json(serde_json::json!({

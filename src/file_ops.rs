@@ -17,7 +17,9 @@ pub async fn upload_gallery(
     Path(id): Path<String>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    println!("\n Upload started for gallery: {id}");
     let mut uploaded_urls: Vec<String> = Vec::new();
+    let mut count: usize = 0;
 
     while let Some(field) = multipart
         .next_field()
@@ -29,6 +31,7 @@ pub async fn upload_gallery(
             continue;
         }
 
+        let original_name = field.file_name().unwrap_or("unknown").to_string();
         let content_type = field
             .content_type()
             .unwrap_or("application/octet-stream")
@@ -52,22 +55,31 @@ pub async fn upload_gallery(
             continue;
         }
 
+        count += 1;
+        let size_kb = data.len() as f64 / 1024.0;
+        println!("  📷 [{count}] Received: {original_name} ({size_kb:.1} KB, {content_type})");
+
         let file_id = Uuid::new_v4();
         let key = format!("galleries/{id}/{file_id}.{ext}");
+        println!("  🔑 [{count}] S3 key: {key}");
 
         let url = upload_to_s3(&state.s3_client, &state.bucket, &key, data, &content_type)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to upload {key}: {e}")))?;
 
+        println!("  ✅ [{count}] Uploaded to S3: {key}");
         uploaded_urls.push(url);
     }
 
     if uploaded_urls.is_empty() {
+        println!("  ⚠️  No images provided");
         return Err((
             StatusCode::BAD_REQUEST,
             "No images provided".to_string(),
         ));
     }
+
+    println!("Upload complete: {count} image(s) uploaded to gallery {id}\n");
 
     Ok(Json(serde_json::json!({
         "gallery_id": id,
