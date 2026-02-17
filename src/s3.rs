@@ -1,6 +1,15 @@
 use aws_sdk_s3::Client;
 use aws_sdk_s3::primitives::ByteStream;
 
+pub fn get_public_url(bucket: &str, key: &str, region: &str) -> String {
+    if let Ok(endpoint) = std::env::var("AWS_ENDPOINT_URL") {
+        if endpoint.contains("localhost") || endpoint.contains("localstack") {
+            return format!("http://{bucket}.s3.localhost.localstack.cloud:4566/{key}");
+        }
+    }
+    format!("https://{bucket}.s3.{region}.amazonaws.com/{key}")
+}
+
 /// Upload bytes to S3 and return the public URL.
 pub async fn upload_to_s3(
     client: &Client,
@@ -9,8 +18,6 @@ pub async fn upload_to_s3(
     data: Vec<u8>,
     content_type: &str,
 ) -> Result<String, String> {
-    println!("  🚀 S3 upload starting: bucket={bucket}, key={key}, size={} bytes, content_type={content_type}", data.len());
-
     match client
         .put_object()
         .bucket(bucket)
@@ -20,18 +27,15 @@ pub async fn upload_to_s3(
         .send()
         .await
     {
-        Ok(_) => {
-            println!("  ✅ S3 upload succeeded: {key}");
-        }
+        Ok(_) => {}
         Err(e) => {
             let err_msg = format!("S3 upload error for key={key}: {e:?}");
-            println!("  ❌ {err_msg}");
             return Err(err_msg);
         }
     }
 
-    let url = format!("https://{bucket}.s3.{}.amazonaws.com/{key}", std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string()));
-    Ok(url)
+    let region = std::env::var("AWS_REGION").unwrap_or_else(|_| "eu-north-1".to_string());
+    Ok(get_public_url(bucket, key, &region))
 }
 
 /// Download an object from S3 and return its bytes.

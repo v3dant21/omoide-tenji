@@ -142,7 +142,7 @@ function UploadApp() {
     }
 
     setUploading(true)
-    setProgress({ current: 0, total: toUpload.length, name: toUpload[0].name })
+    setProgress({ current: 0, total: toUpload.length, name: 'Preparing album...' })
     try {
       // Step 1: Create a new gallery
       const createRes = await fetch('/api/gallery', { method: 'POST' })
@@ -154,26 +154,25 @@ function UploadApp() {
       setShareUrl(fullShareUrl)
       setShowShareBox(true)
 
-      // Step 2: Upload images one by one with progress
-      for (let i = 0; i < toUpload.length; i++) {
-        const item = toUpload[i]
-        setProgress({ current: i + 1, total: toUpload.length, name: item.name })
+      // Step 2: Upload all images in one batch request
+      const fd = new FormData()
+      toUpload.forEach(item => fd.append('image', item.file))
+      setProgress({ current: 0, total: toUpload.length, name: 'Uploading album...' })
 
-        const fd = new FormData()
-        fd.append('image', item.file)
+      const uploadRes = await fetch(`/api/gallery/${gallery_id}/upload`, { method: 'POST', body: fd })
+      if (!uploadRes.ok) throw new Error(await uploadRes.text())
+      const data = await uploadRes.json()
 
-        const uploadRes = await fetch(`/api/gallery/${gallery_id}/upload`, { method: 'POST', body: fd })
-        if (!uploadRes.ok) throw new Error(await uploadRes.text())
-        const data = await uploadRes.json()
-
-        // Update the item with its share link
-        if (data.images && data.images[0]) {
-          setGallery(prev => prev.map(x =>
-            x.id === item.id ? { ...x, shareLink: data.images[0] } : x
-          ))
-        }
-
-
+      // Mark all uploaded items with their S3 URLs
+      if (data.images && data.images.length) {
+        setGallery(prev => prev.map(x => {
+          const idx = toUpload.findIndex(u => u.id === x.id)
+          if (idx !== -1 && data.images[idx]) {
+            return { ...x, shareLink: data.images[idx] }
+          }
+          return x
+        }))
+        setProgress({ current: toUpload.length, total: toUpload.length, name: 'Complete!' })
       }
     } catch (e) {
       setError(e.message)
@@ -407,14 +406,7 @@ function PhotoCard({ item, idx, hasSel, onToggle, onDelete, onMove, onAddTag, on
               ))}
             </div>
           )}
-          {item.shareLink && (
-            <div className="share-link">
-              <a href={item.shareLink} target="_blank" rel="noopener noreferrer">{item.shareLink}</a>
-              <button className="copy-btn" onClick={() => onCopy(item.shareLink)} title="Copy link">
-                <span className="icon">content_copy</span>
-              </button>
-            </div>
-          )}
+
         </div>
       </div>
     </div>
@@ -434,7 +426,7 @@ function ShareLinkBox({ url, onClose }) {
     <div className="share-box">
       <div className="share-box-header">
         <span className="icon">link</span>
-        <span className="share-box-title">Gallery Share Link</span>
+        <span className="share-box-title">Gallery Viewer (Images on S3)</span>
         <button className="share-box-close" onClick={onClose}>
           <span className="icon">close</span>
         </button>

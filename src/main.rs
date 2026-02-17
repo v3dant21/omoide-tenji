@@ -1,5 +1,5 @@
 use aws_sdk_s3::Client;
-
+use std::io::{self, Read};
 mod file_ops;
 mod handler;
 mod routes;
@@ -10,13 +10,28 @@ pub struct AppState {
     pub s3_client: Client,
     pub bucket: String,
 }
+fn ignore_stdin() {
+    std::thread::spawn(||{
+        let mut buffer = [0u8;1024];
+        let mut stdin = io::stdin();
+        loop {
+            match stdin.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(_) => continue,
+                Err(e) => {
+                    eprintln!("Error reading stdin: {}", e);
+                    break;
+                }
+            }
+        }
+    });
+}
 
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
 
     let bucket = std::env::var("S3_BUCKET").expect("S3_BUCKET must be set");
-    let region = std::env::var("AWS_REGION").unwrap_or_else(|_| "not set".to_string());
 
 
     let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
@@ -30,7 +45,7 @@ async fn main() {
         .await
         .expect("Failed to bind to port 5000");
 
-    println!("Server running at http://localhost:5000");
-
+    println!("Server running on port http://localhost:5000");
+    ignore_stdin();
     axum::serve(listener, app).await.unwrap();
 }
