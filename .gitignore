@@ -1,3 +1,23 @@
-/target
+# Rust
+target/
+Cargo.lock
+
+# Node
+node_modules/
+dist/
+build/
+
+# Env
 .env
-.env
+
+# OS
+.DS_Store
+
+
+
+test_images/
+
+
+frontend/static/
+
+*.zip
